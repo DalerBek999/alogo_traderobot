@@ -1,0 +1,38 @@
+TRADE AI — MUAMMO YECHIMI
+=========================
+
+Agar "WAIT", "Tahlil qilish", "397 pip", "synthetic_demo" ko'rsangiz:
+→ ESKI server yoki ESKI brauzer sahifasi. Yangi kod ishlamayapti.
+
+TO'G'RI ISHGA TUSHIRISH:
+1. TOXTAT.bat (barcha eski serverlar o'chadi)
+2. ISHGA-TUSHIR.bat
+3. Brauzerda Ctrl+F5 (qattiq yangilash)
+4. Sarlavhada ko'rinishi kerak: "Elite Engine v2 — aniq BUY / SELL"
+5. Tugma: "ANIQ JAVOB OLISH" (WAIT yo'q)
+6. Javob: "HOZIR BUY OCHING" yoki "HOZIR SELL OCHING"
+
+Tekshirish (brauzer yoki terminal):
+  http://127.0.0.1:8001/api/version
+  → {"engine":"elite-2.0-decisive"}
+
+XAUUSD uchun:
+  SL/TP masofa "punkt ($)" — masalan 4 punkt ≈ $4 zarar (0.01 lot)
+  Eski 397 "pip" — xato edi, tuzatildi.
+
+HAQIQIY NARX (demo emas):
+1. MetaTrader 5 terminalni oching va login qiling
+2. backend\.env da: MT5_ENABLED=true
+3. TOXTAT.bat → ISHGA-TUSHIR.bat
+   Ma'lumot manbasi: mt5:XAUUSD ko'rinadi
+
+Agar tahlil qotib qolsa:
+  MT5 terminal yopiq bo'lsa MT5_ENABLED=true qilib qo'ygan bo'lishingiz mumkin.
+  Terminal oching YOKI MT5_ENABLED=false qoldiring (demo narx, lekin BUY/SELL ishlaydi).
+
+OpenAI:
+  Kerak emas. USE_OPENAI=false (default).
+
+Manzillar:
+  API: http://127.0.0.1:8001
+  Sayt: http://localhost:5173

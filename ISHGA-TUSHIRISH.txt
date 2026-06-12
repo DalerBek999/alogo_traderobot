@@ -1,0 +1,25 @@
+╔══════════════════════════════════════════════════════════╗
+║  TRADE AI — brauzerda ochish (iBank kabi, 2 buyruq)      ║
+╚══════════════════════════════════════════════════════════╝
+
+Terminalni oching va FAQAT shu papkada yozing:
+
+   cd "C:\Users\user\Desktop\Trade AI"
+
+1-qadam (birinchi marta yoki yangilanganda):
+
+   npm install
+
+2-qadam (har safar ishlatish uchun):
+
+   npm run dev
+
+→ Brauzer o‘zi ochiladi: http://localhost:5173
+→ API: http://127.0.0.1:8000
+
+To‘xtatish: Ctrl + C
+
+---
+Grafik AI tahlili: backend\.env ichida OPENAI_API_KEY=sk-...
+
+Boshqa hech narsa yozish shart emas (backend/frontend alohida emas).
