@@ -1,0 +1,150 @@
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║        🤖 FOREX ALGOTRADER V2.0 - QUICK START GUIDE 🤖        ║
+║                                                                ║
+║              Aziz Xalikov Strategy - Micro Account Ready       ║
+║                    Works with $10-$15 accounts                 ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+
+📋 INSTALLATION (5 MINUTES)
+═══════════════════════════════════════════════════════════════
+
+1. INSTALL PYTHON 3.9+
+   Download from: https://www.python.org/downloads/
+   ✓ Check "Add Python to PATH" during installation
+
+2. INSTALL MT5
+   Download from your broker's website
+   ✓ Create a DEMO account (NOT real money!)
+   ✓ Write down: Login, Password, Server name
+
+3. INSTALL DEPENDENCIES
+   Open Command Prompt in project folder:
+   
+   cd alogo_traderobot\backend
+   pip install -r requirements.txt
+   
+   Wait for installation to complete (~2-3 minutes)
+
+
+⚙️ CONFIGURATION (2 MINUTES)
+═══════════════════════════════════════════════════════════════
+
+1. EDIT backend\.env FILE
+   Open with Notepad and change:
+   
+   MT5_LOGIN=12345678              ← Your MT5 demo account number
+   MT5_PASSWORD=your_password      ← Your MT5 demo password
+   MT5_SERVER=YourBroker-Demo      ← Your broker server name
+   
+   ACCOUNT_SIZE=15.0               ← Your demo balance
+   DEMO_ONLY=True                  ← KEEP THIS TRUE for safety!
+
+2. VERIFY MT5 IS RUNNING
+   ✓ Open MetaTrader 5 terminal
+   ✓ Make sure you're logged in
+   ✓ Check "AutoTrading" button (top toolbar) is GREEN
+
+
+🚀 START THE ROBOT
+═══════════════════════════════════════════════════════════════
+
+METHOD 1: Double-click START_ROBOT.bat
+
+METHOD 2: Command line
+   cd backend
+   python trading_bot.py
+
+
+✅ VERIFY IT'S WORKING
+═══════════════════════════════════════════════════════════════
+
+You should see in console:
+
+   ✅ Settings loaded: Account $15.00
+   ✅ Connected to MT5 account 12345678
+   ✅ Balance: $15.00
+   ✅ Mode: DEMO
+   ✅ Symbol EURUSD validated
+   ✅ All components initialized successfully!
+   🚀 Starting trading bot...
+
+If you see these messages = SUCCESS! 🎉
+
+
+📊 WHAT HAPPENS NEXT?
+═══════════════════════════════════════════════════════════════
+
+The robot will:
+   1. Analyze EURUSD, GBPUSD, XAUUSD every 5 minutes
+   2. Look for parallel channel breakouts
+   3. Check RSI for oversold/overbought conditions
+   4. Execute BUY/SELL signals automatically
+   5. Manage TP1, TP2, and SL automatically
+
+Expected signals: 2-5 per week per symbol
+This is NORMAL - quality over quantity!
+
+
+🛡️ SAFETY FEATURES
+═══════════════════════════════════════════════════════════════
+
+✓ DEMO_ONLY=True     - Refuses to trade on real accounts
+✓ Max 10% daily loss - Stops trading if loss exceeds 10%
+✓ Max 3 losses       - Stops after 3 consecutive losses
+✓ 0.01-0.1 lot size  - Safe position sizing for micro accounts
+
+
+📁 IMPORTANT FILES
+═══════════════════════════════════════════════════════════════
+
+backend\.env                  → Your configuration
+backend\logs\traderobot.log   → All trading activity
+ROBOT_GUIDE.md                → Complete documentation
+START_ROBOT.bat               → Easy launcher
+
+
+❓ TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════
+
+❌ "MT5 initialize failed"
+   → Make sure MT5 is running
+   → Check "AutoTrading" is enabled (green)
+
+❌ "Symbol not found"
+   → Open MarketWatch in MT5 (Ctrl+M)
+   → Right-click → Symbols → Add your symbol
+
+❌ "Trading not allowed"
+   → Check MT5 connection (bottom right should be green)
+   → Verify demo account is active
+
+❌ "No signals"
+   → This is normal! Good signals are rare
+   → Wait 1-2 days for market movement
+   → Check logs for "Channel Detected" messages
+
+
+📞 NEED HELP?
+═══════════════════════════════════════════════════════════════
+
+📖 Read full guide: ROBOT_GUIDE.md
+💬 Telegram: @takrorlanmas_robotlar
+📝 Check logs: backend\logs\traderobot.log
+
+
+⚠️ IMPORTANT REMINDERS
+═══════════════════════════════════════════════════════════════
+
+1. ALWAYS test on DEMO first (weeks, not days!)
+2. Monitor the robot - don't leave it unattended
+3. Check logs daily for errors
+4. Never trade with money you can't afford to lose
+5. Past performance ≠ future results
+
+
+═══════════════════════════════════════════════════════════════
+           READY TO START? Run: START_ROBOT.bat
+═══════════════════════════════════════════════════════════════

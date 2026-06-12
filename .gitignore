@@ -8,3 +8,19 @@ node_modules/
 dist/
 .DS_Store
 *.log
+
+# Trading Data & Logs
+backend/logs/
+backend/database/
+*.db
+*.db-journal
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backup
+*.bak
+*.tmp
