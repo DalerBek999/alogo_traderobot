@@ -10,119 +10,113 @@
 
 //--- Input Parameters
 input group "=== TRADING SETTINGS ==="
-input double      RiskPercent = 2.0;           // Risk per trade (%)
-input double      MinLotSize = 0.01;           // Minimum lot size
-input double      MaxLotSize = 0.5;            // Maximum lot size
-input int         MaxSpread = 30;              // Maximum spread (points)
-input int         MagicNumber = 123456;        // Magic number
-input int         MaxOpenTrades = 1;           // Maximum open trades
+input double   RiskPercent        = 2.0;    // Risk per trade (%)
+input double   MinLotSize         = 0.01;   // Minimum lot size
+input double   MaxLotSize         = 0.5;    // Maximum lot size
+input int      MaxSpread          = 30;     // Maximum spread (points)
+input long     MagicNumber        = 123456; // Magic number  // FIX: long (not int) for magic
+input int      MaxOpenTrades      = 1;      // Maximum open trades
 
 input group "=== STRATEGY PARAMETERS ==="
-input int         RSI_Period = 14;             // RSI Period
-input int         RSI_Oversold = 30;           // RSI Oversold level
-input int         RSI_Overbought = 70;         // RSI Overbought level
-input int         MACD_Fast = 12;              // MACD Fast EMA
-input int         MACD_Slow = 26;              // MACD Slow EMA
-input int         MACD_Signal = 9;             // MACD Signal
-input int         BB_Period = 20;              // Bollinger Bands Period
-input double      BB_Deviation = 2.0;          // Bollinger Bands Deviation
-input int         ATR_Period = 14;             // ATR Period
-input double      ATR_Multiplier = 1.5;        // ATR SL Multiplier
-input int         ADX_Period = 14;             // ADX Period
-input double      ADX_MinLevel = 25.0;         // Minimum ADX for trend
+input int      RSI_Period         = 14;
+input int      RSI_Oversold       = 30;
+input int      RSI_Overbought     = 70;
+input int      MACD_Fast          = 12;
+input int      MACD_Slow          = 26;
+input int      MACD_Signal        = 9;
+input int      BB_Period          = 20;
+input double   BB_Deviation       = 2.0;
+input int      ATR_Period         = 14;
+input double   ATR_Multiplier     = 1.5;
+input int      ADX_Period         = 14;
+input double   ADX_MinLevel       = 25.0;
 
 input group "=== RISK MANAGEMENT ==="
-input bool        UseTrailingStop = true;      // Use Trailing Stop
-input int         TrailingStart = 200;         // Trailing Start (points)
-input int         TrailingStep = 50;           // Trailing Step (points)
-input bool        UseBreakeven = true;         // Move SL to Breakeven
-input int         BreakevenStart = 150;        // Breakeven Start (points)
-input int         BreakevenProfit = 10;        // Breakeven Profit (points)
+input bool     UseTrailingStop    = true;
+input int      TrailingStart      = 200;
+input int      TrailingStep       = 50;
+input bool     UseBreakeven       = true;
+input int      BreakevenStart     = 150;
+input int      BreakevenProfit    = 10;
 
 input group "=== TIME FILTERS ==="
-input bool        UseTimeFilter = true;        // Use Time Filter
-input int         MinutesBeforeClose = 15;     // Stop before market close (min)
-input int         TradingStartHour = 1;        // Trading start hour (server)
-input int         TradingEndHour = 22;         // Trading end hour (server)
+input bool     UseTimeFilter      = true;
+input int      MinutesBeforeClose = 15;
+input int      TradingStartHour   = 1;
+input int      TradingEndHour     = 22;
 
 input group "=== NEWS FILTER ==="
-input bool        UseNewsFilter = true;        // Use News Filter
-input int         MinutesBeforeNews = 15;      // Stop before news (minutes)
-input int         MinutesAfterNews = 15;       // Resume after news (minutes)
+input bool     UseNewsFilter      = true;
+input int      MinutesBeforeNews  = 15;
+input int      MinutesAfterNews   = 15;
 
-//--- Global Variables
+//--- Indicator handles
 int handleRSI, handleMACD, handleBB, handleATR, handleADX;
 int handleRSI_H1, handleADX_H1, handleRSI_H4;
-double rsiBuffer[], macdMainBuffer[], macdSignalBuffer[];
+
+//--- Global variables
+// FIX: all indicator buffers declared as global dynamic arrays
+//      and marked AsSeries in OnInit (correct MQL5 pattern)
+double rsiBuffer[];
+double macdMainBuffer[], macdSignalBuffer[];
 double bbUpperBuffer[], bbMiddleBuffer[], bbLowerBuffer[];
 double atrBuffer[], adxBuffer[];
 double rsiH1Buffer[], adxH1Buffer[], rsiH4Buffer[];
-datetime lastBarTime;
 
+datetime lastBarTime = 0;
 
 //+------------------------------------------------------------------+
-//| Expert initialization function                                    |
+//| OnInit                                                           |
 //+------------------------------------------------------------------+
 int OnInit()
 {
-   Print("╔════════════════════════════════════════════════════════╗");
-   Print("║   ProAdvancedTrader v1.0 - Professional Trading Robot  ║");
-   Print("║   Multi-Strategy with Advanced Risk Management         ║");
-   Print("╚════════════════════════════════════════════════════════╝");
-   
-   // Initialize indicators on current timeframe
-   handleRSI = iRSI(_Symbol, PERIOD_CURRENT, RSI_Period, PRICE_CLOSE);
-   handleMACD = iMACD(_Symbol, PERIOD_CURRENT, MACD_Fast, MACD_Slow, MACD_Signal, PRICE_CLOSE);
-   handleBB = iBands(_Symbol, PERIOD_CURRENT, BB_Period, 0, BB_Deviation, PRICE_CLOSE);
-   handleATR = iATR(_Symbol, PERIOD_CURRENT, ATR_Period);
-   handleADX = iADX(_Symbol, PERIOD_CURRENT, ADX_Period);
-   
-   // Initialize higher timeframe indicators
-   handleRSI_H1 = iRSI(_Symbol, PERIOD_H1, RSI_Period, PRICE_CLOSE);
-   handleADX_H1 = iADX(_Symbol, PERIOD_H1, ADX_Period);
-   handleRSI_H4 = iRSI(_Symbol, PERIOD_H4, RSI_Period, PRICE_CLOSE);
-   
-   // Check if indicators are created successfully
-   if(handleRSI == INVALID_HANDLE || handleMACD == INVALID_HANDLE || 
-      handleBB == INVALID_HANDLE || handleATR == INVALID_HANDLE || 
-      handleADX == INVALID_HANDLE || handleRSI_H1 == INVALID_HANDLE ||
+   Print("=== ProAdvancedTrader v1.0 ===");
+
+   handleRSI    = iRSI  (_Symbol, PERIOD_CURRENT, RSI_Period,  PRICE_CLOSE);
+   handleMACD   = iMACD (_Symbol, PERIOD_CURRENT, MACD_Fast, MACD_Slow, MACD_Signal, PRICE_CLOSE);
+   handleBB     = iBands(_Symbol, PERIOD_CURRENT, BB_Period,  0, BB_Deviation, PRICE_CLOSE);
+   handleATR    = iATR  (_Symbol, PERIOD_CURRENT, ATR_Period);
+   handleADX    = iADX  (_Symbol, PERIOD_CURRENT, ADX_Period);
+   handleRSI_H1 = iRSI  (_Symbol, PERIOD_H1, RSI_Period, PRICE_CLOSE);
+   handleADX_H1 = iADX  (_Symbol, PERIOD_H1, ADX_Period);
+   handleRSI_H4 = iRSI  (_Symbol, PERIOD_H4, RSI_Period, PRICE_CLOSE);
+
+   if(handleRSI    == INVALID_HANDLE || handleMACD   == INVALID_HANDLE ||
+      handleBB     == INVALID_HANDLE || handleATR    == INVALID_HANDLE ||
+      handleADX    == INVALID_HANDLE || handleRSI_H1 == INVALID_HANDLE ||
       handleADX_H1 == INVALID_HANDLE || handleRSI_H4 == INVALID_HANDLE)
    {
-      Print("❌ Error creating indicators!");
-      return(INIT_FAILED);
+      Print("ERROR: Failed to create indicators!");
+      return INIT_FAILED;
    }
-   
-   // Set arrays as series
-   ArraySetAsSeries(rsiBuffer, true);
-   ArraySetAsSeries(macdMainBuffer, true);
-   ArraySetAsSeries(macdSignalBuffer, true);
-   ArraySetAsSeries(bbUpperBuffer, true);
-   ArraySetAsSeries(bbMiddleBuffer, true);
-   ArraySetAsSeries(bbLowerBuffer, true);
-   ArraySetAsSeries(atrBuffer, true);
-   ArraySetAsSeries(adxBuffer, true);
-   ArraySetAsSeries(rsiH1Buffer, true);
-   ArraySetAsSeries(adxH1Buffer, true);
-   ArraySetAsSeries(rsiH4Buffer, true);
-   
+
+   // Mark all global buffers as series
+   ArraySetAsSeries(rsiBuffer,       true);
+   ArraySetAsSeries(macdMainBuffer,  true);
+   ArraySetAsSeries(macdSignalBuffer,true);
+   ArraySetAsSeries(bbUpperBuffer,   true);
+   ArraySetAsSeries(bbMiddleBuffer,  true);
+   ArraySetAsSeries(bbLowerBuffer,   true);
+   ArraySetAsSeries(atrBuffer,       true);
+   ArraySetAsSeries(adxBuffer,       true);
+   ArraySetAsSeries(rsiH1Buffer,     true);
+   ArraySetAsSeries(adxH1Buffer,     true);
+   ArraySetAsSeries(rsiH4Buffer,     true);
+
    lastBarTime = 0;
-   
-   Print("✅ Robot initialized successfully!");
-   Print("📊 Symbol: ", _Symbol);
-   Print("⏰ Timeframe: ", EnumToString(Period()));
-   Print("💰 Risk per trade: ", RiskPercent, "%");
-   Print("🎯 Magic Number: ", MagicNumber);
-   
-   return(INIT_SUCCEEDED);
+
+   Print("Robot initialized. Symbol=", _Symbol,
+         "  TF=", EnumToString(Period()),
+         "  Risk=", RiskPercent, "%",
+         "  Magic=", MagicNumber);
+   return INIT_SUCCEEDED;
 }
 
-
 //+------------------------------------------------------------------+
-//| Expert deinitialization function                                 |
+//| OnDeinit                                                         |
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
-   // Release indicator handles
    IndicatorRelease(handleRSI);
    IndicatorRelease(handleMACD);
    IndicatorRelease(handleBB);
@@ -131,315 +125,215 @@ void OnDeinit(const int reason)
    IndicatorRelease(handleRSI_H1);
    IndicatorRelease(handleADX_H1);
    IndicatorRelease(handleRSI_H4);
-   
-   Print("🛑 Robot stopped. Reason: ", getUninitReasonText(reason));
+   Print("Robot stopped. Reason:", getUninitReasonText(reason));
 }
 
 //+------------------------------------------------------------------+
-//| Expert tick function                                             |
+//| OnTick                                                           |
 //+------------------------------------------------------------------+
 void OnTick()
 {
-   // Check for new bar
    datetime currentBarTime = iTime(_Symbol, PERIOD_CURRENT, 0);
-   if(currentBarTime == lastBarTime)
-      return;
-   
+   if(currentBarTime == lastBarTime) return;
    lastBarTime = currentBarTime;
-   
-   // Update indicator buffers
-   if(!UpdateIndicators())
-      return;
-   
-   // Apply filters
-   if(!CheckTimeFilter())
-   {
-      Print("⏰ Time filter: Trading not allowed at this time");
-      return;
-   }
-   
-   if(!CheckMarketCloseFilter())
-   {
-      Print("🔔 Market close filter: Too close to market close");
-      return;
-   }
-   
-   if(!CheckNewsFilter())
-   {
-      Print("📰 News filter: High-impact news detected");
-      return;
-   }
-   
-   if(!CheckSpreadFilter())
-   {
-      Print("📊 Spread filter: Spread too wide");
-      return;
-   }
-   
-   // Manage existing positions
+
+   if(!UpdateIndicators())   return;
+   if(!CheckTimeFilter())    return;
+   if(!CheckMarketCloseFilter()) return;
+   if(!CheckNewsFilter())    return;
+   if(!CheckSpreadFilter())  return;
+
    ManagePositions();
-   
-   // Check if we can open new trades
-   if(CountOpenPositions() >= MaxOpenTrades)
-      return;
-   
-   // Analyze market and generate signals
+
+   if(CountOpenPositions() >= MaxOpenTrades) return;
+
    int signal = AnalyzeMarket();
-   
-   if(signal == 1) // BUY Signal
-   {
-      Print("🚀 BUY SIGNAL DETECTED!");
-      OpenTrade(ORDER_TYPE_BUY);
-   }
-   else if(signal == -1) // SELL Signal
-   {
-      Print("🚀 SELL SIGNAL DETECTED!");
-      OpenTrade(ORDER_TYPE_SELL);
-   }
+   if(signal ==  1) OpenTrade(ORDER_TYPE_BUY);
+   if(signal == -1) OpenTrade(ORDER_TYPE_SELL);
 }
 
-
 //+------------------------------------------------------------------+
-//| Update Indicator Buffers                                         |
+//| UpdateIndicators
+//| FIX: check return value >= required count (not < 0)
 //+------------------------------------------------------------------+
 bool UpdateIndicators()
 {
-   // Copy RSI
-   if(CopyBuffer(handleRSI, 0, 0, 3, rsiBuffer) < 0) return false;
-   
-   // Copy MACD
-   if(CopyBuffer(handleMACD, 0, 0, 3, macdMainBuffer) < 0) return false;
-   if(CopyBuffer(handleMACD, 1, 0, 3, macdSignalBuffer) < 0) return false;
-   
-   // Copy Bollinger Bands
-   if(CopyBuffer(handleBB, 0, 0, 3, bbUpperBuffer) < 0) return false;
-   if(CopyBuffer(handleBB, 1, 0, 3, bbMiddleBuffer) < 0) return false;
-   if(CopyBuffer(handleBB, 2, 0, 3, bbLowerBuffer) < 0) return false;
-   
-   // Copy ATR
-   if(CopyBuffer(handleATR, 0, 0, 3, atrBuffer) < 0) return false;
-   
-   // Copy ADX
-   if(CopyBuffer(handleADX, 0, 0, 3, adxBuffer) < 0) return false;
-   
-   // Copy Higher Timeframe indicators
-   if(CopyBuffer(handleRSI_H1, 0, 0, 2, rsiH1Buffer) < 0) return false;
-   if(CopyBuffer(handleADX_H1, 0, 0, 2, adxH1Buffer) < 0) return false;
-   if(CopyBuffer(handleRSI_H4, 0, 0, 2, rsiH4Buffer) < 0) return false;
-   
+   // FIX: require at least 3 values, return false if fewer
+   if(CopyBuffer(handleRSI,    0, 0, 3, rsiBuffer)        < 3) return false;
+   if(CopyBuffer(handleMACD,   0, 0, 3, macdMainBuffer)   < 3) return false;
+   if(CopyBuffer(handleMACD,   1, 0, 3, macdSignalBuffer) < 3) return false;
+
+   // FIX: iBands buffer indices: 0=Base/Middle, 1=Upper, 2=Lower
+   if(CopyBuffer(handleBB, 1, 0, 3, bbUpperBuffer)  < 3) return false;
+   if(CopyBuffer(handleBB, 0, 0, 3, bbMiddleBuffer) < 3) return false;
+   if(CopyBuffer(handleBB, 2, 0, 3, bbLowerBuffer)  < 3) return false;
+
+   if(CopyBuffer(handleATR,    0, 0, 3, atrBuffer)    < 3) return false;
+   if(CopyBuffer(handleADX,    0, 0, 3, adxBuffer)    < 3) return false;
+   if(CopyBuffer(handleRSI_H1, 0, 0, 3, rsiH1Buffer)  < 3) return false;
+   if(CopyBuffer(handleADX_H1, 0, 0, 3, adxH1Buffer)  < 3) return false;
+   if(CopyBuffer(handleRSI_H4, 0, 0, 3, rsiH4Buffer)  < 3) return false;
+
    return true;
 }
 
 //+------------------------------------------------------------------+
-//| Analyze Market and Generate Signal                              |
+//| AnalyzeMarket                                                    |
 //+------------------------------------------------------------------+
 int AnalyzeMarket()
 {
-   // Get current price
    double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-   
-   // Current timeframe values
-   double rsi = rsiBuffer[0];
-   double macdMain = macdMainBuffer[0];
-   double macdSignal = macdSignalBuffer[0];
-   double macdPrev = macdMainBuffer[1];
-   double macdSignalPrev = macdSignalBuffer[1];
-   double bbUpper = bbUpperBuffer[0];
-   double bbLower = bbLowerBuffer[0];
-   double bbMiddle = bbMiddleBuffer[0];
-   double adx = adxBuffer[0];
-   
-   // Higher timeframe values
-   double rsiH1 = rsiH1Buffer[0];
-   double adxH1 = adxH1Buffer[0];
-   double rsiH4 = rsiH4Buffer[0];
-   
-   // Signal scores
-   int buyScore = 0;
-   int sellScore = 0;
-   
-   // === MULTI-TIMEFRAME RSI ANALYSIS ===
-   // Current TF RSI
-   if(rsi < RSI_Oversold) buyScore += 2;
-   if(rsi > RSI_Overbought) sellScore += 2;
-   
-   // H1 RSI Confirmation
-   if(rsiH1 < 40) buyScore++;
-   if(rsiH1 > 60) sellScore++;
-   
-   // H4 RSI Trend
-   if(rsiH4 < 50) buyScore++;
-   if(rsiH4 > 50) sellScore++;
 
-   
-   // === MACD CROSSOVER ===
-   bool macdBullishCross = (macdMain > macdSignal) && (macdPrev <= macdSignalPrev);
-   bool macdBearishCross = (macdMain < macdSignal) && (macdPrev >= macdSignalPrev);
-   
-   if(macdBullishCross && macdMain < 0) buyScore += 2;
-   if(macdBearishCross && macdMain > 0) sellScore += 2;
-   
-   // === BOLLINGER BANDS ===
-   if(bid < bbLower) buyScore += 2; // Oversold
-   if(ask > bbUpper) sellScore += 2; // Overbought
-   
-   // Price crossing middle band
-   double prevClose = iClose(_Symbol, PERIOD_CURRENT, 1);
+   double rsi           = rsiBuffer[1];
+   double macdMain      = macdMainBuffer[1];
+   double macdSig       = macdSignalBuffer[1];
+   double macdPrev      = macdMainBuffer[2];
+   double macdSigPrev   = macdSignalBuffer[2];
+   double bbUpper       = bbUpperBuffer[1];
+   double bbLower       = bbLowerBuffer[1];
+   double bbMiddle      = bbMiddleBuffer[1];
+   double adx           = adxBuffer[1];
+   double rsiH1         = rsiH1Buffer[1];
+   double adxH1         = adxH1Buffer[1];
+   double rsiH4         = rsiH4Buffer[1];
+
+   int buyScore  = 0;
+   int sellScore = 0;
+
+   // RSI
+   if(rsi < RSI_Oversold)  buyScore  += 2;
+   if(rsi > RSI_Overbought) sellScore += 2;
+   if(rsiH1 < 40)  buyScore++;
+   if(rsiH1 > 60)  sellScore++;
+   if(rsiH4 < 50)  buyScore++;
+   if(rsiH4 > 50)  sellScore++;
+
+   // MACD crossover
+   if(macdMain > macdSig && macdPrev <= macdSigPrev && macdMain < 0) buyScore  += 2;
+   if(macdMain < macdSig && macdPrev >= macdSigPrev && macdMain > 0) sellScore += 2;
+
+   // Bollinger Bands
+   if(bid < bbLower)  buyScore  += 2;
+   if(ask > bbUpper)  sellScore += 2;
+
+   double prevClose = iClose(_Symbol, PERIOD_CURRENT, 2);
    if(prevClose < bbMiddle && bid > bbMiddle) buyScore++;
    if(prevClose > bbMiddle && ask < bbMiddle) sellScore++;
-   
-   // === ADX TREND STRENGTH ===
-   // Require strong trend for both current and H1 timeframes
-   bool strongTrend = (adx > ADX_MinLevel && adxH1 > ADX_MinLevel);
-   
-   if(!strongTrend)
+
+   // ADX trend strength filter
+   if(adx < ADX_MinLevel || adxH1 < ADX_MinLevel)
    {
-      Print("⚠️ Weak trend detected. ADX: ", adx, " ADX H1: ", adxH1);
-      return 0; // No signal in weak trend
-   }
-   
-   // === PRICE ACTION CONFIRMATION ===
-   double range = iHigh(_Symbol, PERIOD_CURRENT, 1) - iLow(_Symbol, PERIOD_CURRENT, 1);
-   double atr = atrBuffer[0];
-   
-   // Volatility check
-   if(range < atr * 0.5)
-   {
-      Print("⚠️ Low volatility. Range: ", range, " ATR: ", atr);
+      if(InpDebugPrint()) Print("Weak trend. ADX=", adx, " ADX_H1=", adxH1);
       return 0;
    }
-   
-   // === FINAL DECISION ===
-   Print("📊 Market Analysis: BUY=", buyScore, " SELL=", sellScore);
-   Print("   RSI: ", rsi, " | MACD: ", macdMain, " | ADX: ", adx);
-   Print("   H1 RSI: ", rsiH1, " | H4 RSI: ", rsiH4);
-   
-   // Require minimum score of 5 for signal confirmation
-   if(buyScore >= 5 && buyScore > sellScore)
-      return 1; // BUY
-   
-   if(sellScore >= 5 && sellScore > buyScore)
-      return -1; // SELL
-   
-   return 0; // No signal
+
+   // Volatility check
+   double range = iHigh(_Symbol, PERIOD_CURRENT, 1) - iLow(_Symbol, PERIOD_CURRENT, 1);
+   double atr   = atrBuffer[1];
+   if(range < atr * 0.5)
+   {
+      if(InpDebugPrint()) Print("Low volatility. Range=", range, " ATR=", atr);
+      return 0;
+   }
+
+   if(buyScore  >= 5 && buyScore  > sellScore) return  1;
+   if(sellScore >= 5 && sellScore > buyScore)  return -1;
+   return 0;
 }
 
+// Helper: avoid unused input warning – no debug input in v1, just always false
+bool InpDebugPrint() { return false; }
 
 //+------------------------------------------------------------------+
-//| Open Trade with Dynamic Risk Management                         |
+//| OpenTrade                                                        |
 //+------------------------------------------------------------------+
 void OpenTrade(ENUM_ORDER_TYPE orderType)
 {
-   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-   double atr = atrBuffer[0];
-   
-   // Calculate SL based on ATR
-   double slDistance = atr * ATR_Multiplier;
-   double sl = 0, tp = 0;
-   double price = 0;
-   
+   double ask  = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double bid  = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double atr  = atrBuffer[1];
+
+   double slDist = atr * ATR_Multiplier;
+   double entry, sl, tp;
+
    if(orderType == ORDER_TYPE_BUY)
    {
-      price = ask;
-      sl = NormalizeDouble(bid - slDistance, _Digits);
-      tp = NormalizeDouble(ask + slDistance * 2.0, _Digits); // 1:2 RR
+      entry = ask;
+      sl    = NormalizeDouble(bid - slDist,        _Digits);
+      tp    = NormalizeDouble(ask + slDist * 2.0,  _Digits);
    }
    else
    {
-      price = bid;
-      sl = NormalizeDouble(ask + slDistance, _Digits);
-      tp = NormalizeDouble(bid - slDistance * 2.0, _Digits); // 1:2 RR
+      entry = bid;
+      sl    = NormalizeDouble(ask + slDist,         _Digits);
+      tp    = NormalizeDouble(bid - slDist * 2.0,   _Digits);
    }
-   
-   // Calculate lot size
-   double lotSize = CalculateLotSize(sl, price);
-   
+
+   double lotSize = CalculateLotSize(sl, entry);
    if(lotSize < MinLotSize)
-   {
-      Print("❌ Lot size too small: ", lotSize);
-      return;
-   }
-   
-   // Prepare request
+      { Print("Lot size too small: ", lotSize); return; }
+
    MqlTradeRequest request = {};
-   MqlTradeResult result = {};
-   
-   request.action = TRADE_ACTION_DEAL;
-   request.symbol = _Symbol;
-   request.volume = lotSize;
-   request.type = orderType;
-   request.price = price;
-   request.sl = sl;
-   request.tp = tp;
-   request.deviation = 10;
-   request.magic = MagicNumber;
-   request.comment = "ProAdvanced v1.0";
+   MqlTradeResult  result  = {};
+
+   request.action       = TRADE_ACTION_DEAL;
+   request.symbol       = _Symbol;
+   request.volume       = lotSize;
+   request.type         = orderType;
+   request.price        = entry;
+   request.sl           = sl;
+   request.tp           = tp;
+   request.deviation    = 10;
+   request.magic        = MagicNumber;
+   request.comment      = "ProAdvanced v1.0";
    request.type_filling = ORDER_FILLING_FOK;
-   
-   // Send order
+
    if(!OrderSend(request, result))
-   {
-      Print("❌ OrderSend failed! Error: ", GetLastError());
-      Print("   RetCode: ", result.retcode);
-      return;
-   }
-   
+      { Print("OrderSend failed! Error:", GetLastError(), " RetCode:", result.retcode); return; }
+
    if(result.retcode == TRADE_RETCODE_DONE)
    {
-      Print("✅ Trade opened successfully!");
-      Print("   Type: ", orderType == ORDER_TYPE_BUY ? "BUY" : "SELL");
-      Print("   Lot: ", lotSize);
-      Print("   Price: ", price);
-      Print("   SL: ", sl, " | TP: ", tp);
-      Print("   ATR: ", atr);
+      string dir = (orderType == ORDER_TYPE_BUY) ? "BUY" : "SELL";
+      Print("TRADE: ", dir, "  Lot=", lotSize,
+            "  Entry=", entry, "  SL=", sl, "  TP=", tp, "  ATR=", atr);
    }
    else
-   {
-      Print("⚠️ Trade failed. RetCode: ", result.retcode);
-   }
+      Print("Trade failed. RetCode:", result.retcode);
 }
 
-
 //+------------------------------------------------------------------+
-//| Calculate Lot Size Based on Risk                                |
+//| CalculateLotSize                                                 |
+//| FIX: formula corrected: risk / (slPoints / tickSize * tickValue) |
 //+------------------------------------------------------------------+
 double CalculateLotSize(double sl, double entryPrice)
 {
-   double accountBalance = AccountInfoDouble(ACCOUNT_BALANCE);
-   double riskAmount = accountBalance * (RiskPercent / 100.0);
-   
+   double balance  = AccountInfoDouble(ACCOUNT_BALANCE);
+   double riskAmt  = balance * (RiskPercent / 100.0);
    double slPoints = MathAbs(entryPrice - sl);
-   double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
-   double tickSize = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
-   double minLot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
-   double maxLot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
-   double lotStep = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
-   
-   // Calculate lot size
-   double lotSize = (riskAmount / slPoints) * (tickSize / tickValue);
-   
-   // Round to lot step
+   double tickVal  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   double tickSz   = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+   double minLot   = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+   double maxLot   = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
+   double lotStep  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+
+   if(tickVal == 0 || tickSz == 0 || slPoints == 0) return minLot;
+
+   // Correct formula
+   double slTicks = slPoints / tickSz;
+   double lotSize = riskAmt  / (slTicks * tickVal);
+
    lotSize = MathFloor(lotSize / lotStep) * lotStep;
-   
-   // Apply limits
-   if(lotSize < minLot) lotSize = minLot;
-   if(lotSize > maxLot) lotSize = maxLot;
+   if(lotSize < minLot)   lotSize = minLot;
+   if(lotSize > maxLot)   lotSize = maxLot;
    if(lotSize > MaxLotSize) lotSize = MaxLotSize;
    if(lotSize < MinLotSize) lotSize = 0;
-   
-   Print("💰 Lot Calculation:");
-   Print("   Balance: $", accountBalance);
-   Print("   Risk: $", riskAmount, " (", RiskPercent, "%)");
-   Print("   SL Points: ", slPoints);
-   Print("   Lot Size: ", lotSize);
-   
+
    return NormalizeDouble(lotSize, 2);
 }
 
 //+------------------------------------------------------------------+
-//| Manage Open Positions (Trailing Stop & Breakeven)               |
+//| ManagePositions                                                  |
 //+------------------------------------------------------------------+
 void ManagePositions()
 {
@@ -447,208 +341,162 @@ void ManagePositions()
    {
       ulong ticket = PositionGetTicket(i);
       if(ticket <= 0) continue;
-      
-      if(PositionGetString(POSITION_SYMBOL) != _Symbol) continue;
-      if(PositionGetInteger(POSITION_MAGIC) != MagicNumber) continue;
-      
-      double posOpenPrice = PositionGetDouble(POSITION_PRICE_OPEN);
-      double posSL = PositionGetDouble(POSITION_SL);
-      double posTP = PositionGetDouble(POSITION_TP);
-      ENUM_POSITION_TYPE posType = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
-      
-      double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-      double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-      double currentPrice = (posType == POSITION_TYPE_BUY) ? bid : ask;
-      
-      double profit = (posType == POSITION_TYPE_BUY) ? 
-                      (bid - posOpenPrice) : (posOpenPrice - ask);
+      if(PositionGetString(POSITION_SYMBOL) != _Symbol)           continue;
+      // FIX: cast MagicNumber to long for comparison
+      if((long)PositionGetInteger(POSITION_MAGIC) != MagicNumber) continue;
+
+      double             posOpen  = PositionGetDouble(POSITION_PRICE_OPEN);
+      double             posSL    = PositionGetDouble(POSITION_SL);
+      double             posTP    = PositionGetDouble(POSITION_TP);
+      ENUM_POSITION_TYPE posType  = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
+      double             ask      = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      double             bid      = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+
+      double profit       = (posType == POSITION_TYPE_BUY) ? (bid - posOpen) : (posOpen - ask);
       double profitPoints = profit / _Point;
-      
-      // === BREAKEVEN ===
+
+      // Breakeven
       if(UseBreakeven && profitPoints >= BreakevenStart)
       {
-         double newSL = posOpenPrice + (BreakevenProfit * _Point * ((posType == POSITION_TYPE_BUY) ? 1 : -1));
-         
-         if((posType == POSITION_TYPE_BUY && (posSL < posOpenPrice || posSL == 0)) ||
-            (posType == POSITION_TYPE_SELL && (posSL > posOpenPrice || posSL == 0)))
+         double newSL = posOpen + BreakevenProfit * _Point * ((posType == POSITION_TYPE_BUY) ? 1 : -1);
+         if((posType == POSITION_TYPE_BUY  && (posSL < posOpen || posSL == 0)) ||
+            (posType == POSITION_TYPE_SELL && (posSL > posOpen || posSL == 0)))
          {
             ModifyPosition(ticket, newSL, posTP);
-            Print("🎯 Breakeven set for position #", ticket);
+            Print("Breakeven set for #", ticket);
          }
       }
-      
-      // === TRAILING STOP ===
+
+      // Trailing stop
       if(UseTrailingStop && profitPoints >= TrailingStart)
       {
          double newSL = 0;
-         
          if(posType == POSITION_TYPE_BUY)
          {
-            newSL = bid - (TrailingStep * _Point);
-            if(newSL > posSL + (TrailingStep * _Point) || posSL == 0)
-            {
+            newSL = bid - TrailingStep * _Point;
+            if(newSL > posSL + TrailingStep * _Point || posSL == 0)
                ModifyPosition(ticket, newSL, posTP);
-               Print("📈 Trailing stop updated for BUY #", ticket);
-            }
          }
          else
          {
-            newSL = ask + (TrailingStep * _Point);
-            if(newSL < posSL - (TrailingStep * _Point) || posSL == 0)
-            {
+            newSL = ask + TrailingStep * _Point;
+            if(newSL < posSL - TrailingStep * _Point || posSL == 0)
                ModifyPosition(ticket, newSL, posTP);
-               Print("📉 Trailing stop updated for SELL #", ticket);
-            }
          }
       }
    }
 }
 
-
 //+------------------------------------------------------------------+
-//| Modify Position                                                  |
+//| ModifyPosition                                                   |
 //+------------------------------------------------------------------+
 bool ModifyPosition(ulong ticket, double sl, double tp)
 {
    MqlTradeRequest request = {};
-   MqlTradeResult result = {};
-   
-   request.action = TRADE_ACTION_SLTP;
+   MqlTradeResult  result  = {};
+
+   request.action   = TRADE_ACTION_SLTP;
    request.position = ticket;
-   request.sl = NormalizeDouble(sl, _Digits);
-   request.tp = NormalizeDouble(tp, _Digits);
-   
+   request.sl       = NormalizeDouble(sl, _Digits);
+   request.tp       = NormalizeDouble(tp, _Digits);
+
    if(!OrderSend(request, result))
-   {
-      Print("❌ Modify failed! Error: ", GetLastError());
-      return false;
-   }
-   
+      { Print("Modify failed! Error:", GetLastError()); return false; }
+
    return (result.retcode == TRADE_RETCODE_DONE);
 }
 
 //+------------------------------------------------------------------+
-//| Count Open Positions                                            |
+//| CountOpenPositions                                               |
 //+------------------------------------------------------------------+
 int CountOpenPositions()
 {
    int count = 0;
    for(int i = 0; i < PositionsTotal(); i++)
    {
-      if(PositionGetSymbol(i) == _Symbol && 
-         PositionGetInteger(POSITION_MAGIC) == MagicNumber)
+      if(PositionGetSymbol(i) == _Symbol &&
+         (long)PositionGetInteger(POSITION_MAGIC) == MagicNumber)
          count++;
    }
    return count;
 }
 
 //+------------------------------------------------------------------+
-//| Check Time Filter                                               |
+//| CheckTimeFilter                                                  |
 //+------------------------------------------------------------------+
 bool CheckTimeFilter()
 {
    if(!UseTimeFilter) return true;
-   
-   MqlDateTime time;
-   TimeToStruct(TimeCurrent(), time);
-   
-   if(time.hour < TradingStartHour || time.hour >= TradingEndHour)
-      return false;
-   
-   return true;
+   MqlDateTime t;
+   TimeToStruct(TimeCurrent(), t);
+   return (t.hour >= TradingStartHour && t.hour < TradingEndHour);
 }
 
 //+------------------------------------------------------------------+
-//| Check Market Close Filter                                       |
+//| CheckMarketCloseFilter                                           |
 //+------------------------------------------------------------------+
 bool CheckMarketCloseFilter()
 {
-   MqlDateTime time;
-   TimeToStruct(TimeCurrent(), time);
-   
-   // Friday close check (usually 22:00-23:00 server time)
-   if(time.day_of_week == 5) // Friday
+   MqlDateTime t;
+   TimeToStruct(TimeCurrent(), t);
+   if(t.day_of_week == 5) // Friday
    {
-      if(time.hour >= 22 || (time.hour == 21 && time.min >= (60 - MinutesBeforeClose)))
+      if(t.hour >= 22 || (t.hour == 21 && t.min >= 60 - MinutesBeforeClose))
          return false;
    }
-   
    return true;
 }
 
-
 //+------------------------------------------------------------------+
-//| Check News Filter (Simplified)                                  |
+//| CheckNewsFilter                                                  |
 //+------------------------------------------------------------------+
 bool CheckNewsFilter()
 {
    if(!UseNewsFilter) return true;
-   
-   // Simplified news filter based on time
-   // High-impact news usually at: 8:30, 10:00, 12:30, 14:00, 15:30 GMT
-   MqlDateTime time;
-   TimeToStruct(TimeGMT(), time);
-   
-   int currentMinute = time.hour * 60 + time.min;
-   
-   // News times in minutes from midnight GMT
-   int newsTimes[] = {
-      510,  // 08:30
-      600,  // 10:00
-      750,  // 12:30
-      840,  // 14:00
-      930   // 15:30
-   };
-   
-   for(int i = 0; i < ArraySize(newsTimes); i++)
+
+   MqlDateTime t;
+   TimeToStruct(TimeGMT(), t);
+   int currentMinute = t.hour * 60 + t.min;
+
+   // FIX: declare as const to avoid "static array" warning
+   const int newsTimes[5] = { 510, 600, 750, 840, 930 };
+
+   for(int i = 0; i < 5; i++)
    {
-      int newsTime = newsTimes[i];
-      int timeDiff = MathAbs(currentMinute - newsTime);
-      
+      int timeDiff = MathAbs(currentMinute - newsTimes[i]);
       if(timeDiff <= MinutesBeforeNews || timeDiff <= MinutesAfterNews)
-      {
-         Print("📰 News filter active. Minutes to/from news: ", timeDiff);
          return false;
-      }
    }
-   
    return true;
 }
 
 //+------------------------------------------------------------------+
-//| Check Spread Filter                                             |
+//| CheckSpreadFilter                                                |
 //+------------------------------------------------------------------+
 bool CheckSpreadFilter()
 {
    long spread = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
-   
-   if(spread > MaxSpread)
-   {
-      Print("📊 Spread too wide: ", spread, " points (Max: ", MaxSpread, ")");
-      return false;
-   }
-   
-   return true;
+   return (spread <= MaxSpread);
 }
 
 //+------------------------------------------------------------------+
-//| Get Uninit Reason Text                                          |
+//| getUninitReasonText                                              |
 //+------------------------------------------------------------------+
 string getUninitReasonText(int reasonCode)
 {
-   string text = "";
    switch(reasonCode)
    {
-      case REASON_PROGRAM:     text = "Program stopped by user"; break;
-      case REASON_REMOVE:      text = "Program removed from chart"; break;
-      case REASON_RECOMPILE:   text = "Program recompiled"; break;
-      case REASON_CHARTCHANGE: text = "Chart symbol or timeframe changed"; break;
-      case REASON_CHARTCLOSE:  text = "Chart closed"; break;
-      case REASON_PARAMETERS:  text = "Input parameters changed"; break;
-      case REASON_ACCOUNT:     text = "Account changed"; break;
-      default:                 text = "Unknown reason";
+      case REASON_PROGRAM:     return "Program stopped by user";
+      case REASON_REMOVE:      return "Program removed from chart";
+      case REASON_RECOMPILE:   return "Program recompiled";
+      case REASON_CHARTCHANGE: return "Chart symbol or timeframe changed";
+      case REASON_CHARTCLOSE:  return "Chart closed";
+      case REASON_PARAMETERS:  return "Input parameters changed";
+      case REASON_ACCOUNT:     return "Account changed";
+      default:                 return "Unknown reason";
    }
-   return text;
 }
 
+//+------------------------------------------------------------------+
+//| END OF EXPERT ADVISOR                                            |
 //+------------------------------------------------------------------+
